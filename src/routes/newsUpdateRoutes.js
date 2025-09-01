@@ -10,12 +10,13 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// Apply authentication to all routes
-router.use(protect);
-
-// Routes
 router.get("/public/active", newsUpdateController.getActiveNewsUpdates);
 router.get("/public/:id", newsUpdateController.getNewsUpdateByID);
+
+// Apply authentication to all routes
+router.use(protect);
+// router.get("/", newsUpdateController.getNewsUpdates);
+// router.get("/active", newsUpdateController.getActiveNewsUpdates);
 router.get("/:id", newsUpdateController.getNewsUpdateByID);
 router.post("/", restrictTo('admin', 'superadmin'), upload.single("image"), newsUpdateController.createNewsUpdate);
 router.put("/:id", restrictTo('admin', 'superadmin'), upload.single("image"), newsUpdateController.updateNewsUpdate);
