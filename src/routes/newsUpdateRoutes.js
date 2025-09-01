@@ -14,8 +14,8 @@ const upload = multer({ storage });
 router.use(protect);
 
 // Routes
-router.get("/", newsUpdateController.getNewsUpdates);
-router.get("/active", newsUpdateController.getActiveNewsUpdates);
+router.get("/public/active", newsUpdateController.getActiveNewsUpdates);
+router.get("/public/:id", newsUpdateController.getNewsUpdateByID);
 router.get("/:id", newsUpdateController.getNewsUpdateByID);
 router.post("/", restrictTo('admin', 'superadmin'), upload.single("image"), newsUpdateController.createNewsUpdate);
 router.put("/:id", restrictTo('admin', 'superadmin'), upload.single("image"), newsUpdateController.updateNewsUpdate);
