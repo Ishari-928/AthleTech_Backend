@@ -1,4 +1,3 @@
-// routes/eventRoutes.js
 const express = require("express");
 const router = express.Router();
 const eventController = require("../controllers/eventController");
@@ -8,8 +7,6 @@ router.use(protect);
 
 router.get("/active", eventController.getAllActiveEvents);
 router.get("/:id", eventController.getEventById);
-
-// Super admin only routes
 router.get("/admin/all", eventController.requireSuperAdmin, eventController.getAllEvents);
 router.post("/", eventController.requireSuperAdmin, eventController.createEvent);
 router.patch("/:id/toggle-status", eventController.requireSuperAdmin, eventController.toggleEventStatus);

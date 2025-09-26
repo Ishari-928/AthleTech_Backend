@@ -14,6 +14,14 @@ const FieldEvents = require('./models/FieldEvents');
 const TrackEventHeat = require('./models/TrackEventHeat');
 const HeatAssignment = require('./models/HeatAssignment');
 
+// New model imports
+const TrackHeatAssignment = require('./models/TrackHeatAssignment');
+const TrackEventHeatResult = require('./models/TrackEventHeatResult');
+const TrackEventSemifinalResult = require('./models/TrackEventSemifinalResult');
+const TrackEventFinalResult = require('./models/TrackEventFinalResult');
+const { setupAssociations } = require('./models/associations');
+setupAssociations();
+
 const { hashPassword } = require('./utils/password');
 
 const PORT = process.env.PORT || 5000;

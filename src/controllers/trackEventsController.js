@@ -5,11 +5,9 @@ const { catchAsync } = require("../utils/ErrorHandling/catchAsync");
 const { ValidationFailureError } = require("../utils/ErrorHandling/CustomErrors");
 const { Op } = require('sequelize');
 
-// Track events that require heat management
 const TRACK_EVENTS = ['60M', '100M', '200M', '400M', '800M', '100MH', '400MH'];
 const LANES_PER_TRACK = 8;
 
-// Get athletes for a specific track event
 exports.getTrackEventAthletes = catchAsync(async (req, res, _next) => {
   const { event_name, year, gender, age_group } = req.query;
   
@@ -29,23 +27,20 @@ exports.getTrackEventAthletes = catchAsync(async (req, res, _next) => {
   if (gender && gender !== 'all') whereClause.gender = gender;
   if (age_group && age_group !== 'all') whereClause.age_group = age_group;
   
-  // Get all athletes first
   const athletes = await Athlete.findAll({
     where: whereClause,
     attributes: ['athlete_id', 'bib_no', 'name', 'school', 'age_group', 'gender', 'selected_events']
   });
   
-  // Debug: log what events are being found
   console.log('All athletes selected_events:', athletes.map(a => a.selected_events));
   
-  // Filter athletes who have selected this event
+  // Filter athletes 
   const eventAthletes = athletes.filter(athlete => {
     try {
       let events = [];
       if (Array.isArray(athlete.selected_events)) {
         events = athlete.selected_events;
       } else if (typeof athlete.selected_events === 'string') {
-        // Try to parse JSON if it's a string
         events = JSON.parse(athlete.selected_events || '[]');
       }
       
@@ -67,7 +62,6 @@ exports.getTrackEventAthletes = catchAsync(async (req, res, _next) => {
   });
 });
 
-// Create heats for a track event (for ALL athletes)
 exports.createHeats = catchAsync(async (req, res, _next) => {
   const { event_name, year } = req.body;
   
@@ -79,7 +73,6 @@ exports.createHeats = catchAsync(async (req, res, _next) => {
     throw new ValidationFailureError("This event does not require heat management");
   }
   
-  // Get ALL athletes for this event and year (regardless of gender/age group)
   const athletes = await Athlete.findAll({
     where: {
       approved: true,
@@ -91,7 +84,6 @@ exports.createHeats = catchAsync(async (req, res, _next) => {
   
   console.log(`Found ${athletes.length} total athletes for year ${year}`);
   
-  // Filter athletes who have selected this event
   const eventAthletes = athletes.filter(athlete => {
     try {
       let events = [];
@@ -116,7 +108,6 @@ exports.createHeats = catchAsync(async (req, res, _next) => {
     throw new ValidationFailureError("No athletes found for this event");
   }
   
-  // Group athletes by gender and age_group
   const groupedAthletes = {};
   eventAthletes.forEach(athlete => {
     const groupKey = `${athlete.gender}-${athlete.age_group}`;
@@ -133,20 +124,16 @@ exports.createHeats = catchAsync(async (req, res, _next) => {
   
   const allCreatedHeats = [];
   
-  // Create heats for each group (gender + age_group combination)
   for (const [groupKey, groupAthletes] of Object.entries(groupedAthletes)) {
     const [gender, age_group] = groupKey.split('-');
     
     console.log(`Creating heats for ${gender} ${age_group} with ${groupAthletes.length} athletes`);
     
-    // Determine number of heats needed for this group
     const numberOfHeats = calculateNumberOfHeats(groupAthletes.length);
     console.log(`Need ${numberOfHeats} heats for ${groupAthletes.length} athletes`);
     
-    // Distribute athletes into heats
     const heatDistribution = distributeAthletesToHeats(groupAthletes, numberOfHeats);
     
-    // Create heats and assignments for this group
     for (let i = 0; i < numberOfHeats; i++) {
       const heatNumber = i + 1;
       
@@ -195,7 +182,6 @@ exports.createHeats = catchAsync(async (req, res, _next) => {
   });
 });
 
-// Helper function to calculate number of heats
 function calculateNumberOfHeats(athleteCount) {
   if (athleteCount <= LANES_PER_TRACK) return 1;
   if (athleteCount <= 16) return 2;
@@ -206,7 +192,6 @@ function calculateNumberOfHeats(athleteCount) {
   return Math.ceil(athleteCount / LANES_PER_TRACK);
 }
 
-// Helper function to distribute athletes to heats
 function distributeAthletesToHeats(athletes, numberOfHeats) {
   const athletesBySchool = {};
   athletes.forEach(athlete => {
@@ -219,7 +204,6 @@ function distributeAthletesToHeats(athletes, numberOfHeats) {
   const heats = Array.from({ length: numberOfHeats }, () => []);
   const schoolDistribution = {};
   
-  // First pass: Distribute athletes ensuring no more than 2 from same school in a heat
   Object.keys(athletesBySchool).forEach(school => {
     schoolDistribution[school] = 0;
     const schoolAthletes = athletesBySchool[school];
@@ -227,7 +211,6 @@ function distributeAthletesToHeats(athletes, numberOfHeats) {
     schoolAthletes.forEach(athlete => {
       let assigned = false;
       
-      // Try to find a heat with fewer than 2 athletes from this school
       for (let i = 0; i < numberOfHeats; i++) {
         const athletesFromSameSchoolInHeat = heats[i].filter(a => a.school === school).length;
         if (athletesFromSameSchoolInHeat < 2) {
@@ -238,7 +221,6 @@ function distributeAthletesToHeats(athletes, numberOfHeats) {
         }
       }
       
-      // If couldn't assign following the rule, assign to smallest heat
       if (!assigned) {
         const smallestHeat = heats.reduce((minHeat, heat, index) => 
           heat.length < minHeat.heat.length ? { heat, index } : minHeat, 
@@ -250,13 +232,11 @@ function distributeAthletesToHeats(athletes, numberOfHeats) {
     });
   });
   
-  // Balance heats by moving athletes if needed
   balanceHeats(heats);
   
   return heats;
 }
 
-// Helper function to balance heat sizes
 function balanceHeats(heats) {
   const totalAthletes = heats.flat().length;
   const targetSize = Math.ceil(totalAthletes / heats.length);
@@ -268,7 +248,6 @@ function balanceHeats(heats) {
     for (let i = 0; i < heats.length; i++) {
       for (let j = i + 1; j < heats.length; j++) {
         if (heats[i].length > targetSize + 1 && heats[j].length < targetSize) {
-          // Try to move an athlete from heat i to heat j
           const athleteToMove = findAthleteToMove(heats[i], heats[j]);
           if (athleteToMove) {
             heats[i] = heats[i].filter(a => a.athlete_id !== athleteToMove.athlete_id);
@@ -281,7 +260,6 @@ function balanceHeats(heats) {
   }
 }
 
-// Helper function to find an athlete that can be moved without violating school rules
 function findAthleteToMove(sourceHeat, targetHeat) {
   for (const athlete of sourceHeat) {
     const athletesFromSameSchoolInTarget = targetHeat.filter(a => a.school === athlete.school).length;
@@ -292,7 +270,6 @@ function findAthleteToMove(sourceHeat, targetHeat) {
   return null;
 }
 
-// Record performance times and determine qualifiers
 exports.recordHeatResults = catchAsync(async (req, res, _next) => {
   const { heat_id, results } = req.body;
   
@@ -315,7 +292,6 @@ exports.recordHeatResults = catchAsync(async (req, res, _next) => {
     throw new ValidationFailureError("Heat not found");
   }
   
-  // Update performances
   for (const result of results) {
     const assignment = await HeatAssignment.findOne({
       where: {
@@ -332,7 +308,6 @@ exports.recordHeatResults = catchAsync(async (req, res, _next) => {
     }
   }
   
-  // Determine qualifiers based on heat results
   await determineQualifiers(heat_id);
   
   res.status(200).json({
@@ -341,7 +316,6 @@ exports.recordHeatResults = catchAsync(async (req, res, _next) => {
   });
 });
 
-// Helper function to determine qualifiers
 async function determineQualifiers(heatId) {
   const heat = await TrackEventHeat.findByPk(heatId);
   const allHeats = await TrackEventHeat.findAll({
@@ -379,18 +353,14 @@ async function determineQualifiers(heatId) {
     }
   }
   
-  // Sort by time (ascending for track events - lower time is better)
   allPerformances.sort((a, b) => a.time - b.time);
   
-  // Determine qualification rules based on number of athletes
   const totalAthletes = allPerformances.length;
   const qualificationRules = getQualificationRules(totalAthletes);
   
-  // Mark qualifiers
   let qualifiedCount = 0;
   const heatWinners = new Set();
   
-  // First: Mark heat winners (Q qualification) 
   for (const heat of allHeats) {
     const heatPerformances = allPerformances.filter(p => 
       p.heat_number === heat.heat_number
@@ -407,7 +377,6 @@ async function determineQualifiers(heatId) {
     }
   }
   
-  // Then: Mark time qualifiers (q qualification)
   if (qualifiedCount < qualificationRules.totalQualifiers) {
     const remainingSpots = qualificationRules.totalQualifiers - qualifiedCount;
     const timeQualifiers = allPerformances
@@ -423,23 +392,20 @@ async function determineQualifiers(heatId) {
   }
 }
 
-// Helper function to get qualification rules
 function getQualificationRules(totalAthletes) {
   if (totalAthletes <= 8) {
-    return { heatQ: 0, totalQualifiers: totalAthletes }; // All go to final
+    return { heatQ: 0, totalQualifiers: totalAthletes }; 
   } else if (totalAthletes <= 16) {
-    return { heatQ: 3, totalQualifiers: 8 }; // Top 3 each heat + next 2
+    return { heatQ: 3, totalQualifiers: 8 }; 
   } else if (totalAthletes <= 24) {
-    return { heatQ: 2, totalQualifiers: 8 }; // Top 2 each heat + next 4
+    return { heatQ: 2, totalQualifiers: 8 }; 
   } else if (totalAthletes <= 32) {
-    return { heatQ: 3, totalQualifiers: 16 }; // Top 3 each heat + next 4 for semifinals
+    return { heatQ: 3, totalQualifiers: 16 }; 
   } else {
-    // Default rules for larger events
     return { heatQ: 2, totalQualifiers: Math.min(24, Math.ceil(totalAthletes * 0.5)) };
   }
 }
 
-// Create next round (semifinals/finals)
 exports.createNextRound = catchAsync(async (req, res, _next) => {
   const { event_name, year, gender, age_group, round } = req.body;
   
@@ -451,7 +417,6 @@ exports.createNextRound = catchAsync(async (req, res, _next) => {
     throw new ValidationFailureError("Round must be 'semifinal' or 'final'");
   }
   
-  // Get qualifiers from previous round
   const previousRound = round === 'semifinal' ? 'heat' : 'semifinal';
   
   const qualifiers = await HeatAssignment.findAll({
@@ -478,7 +443,6 @@ exports.createNextRound = catchAsync(async (req, res, _next) => {
     throw new ValidationFailureError("No qualifiers found for the next round");
   }
   
-  // Create new heats for the next round
   const numberOfHeats = calculateNumberOfHeats(qualifiers.length);
   const heats = [];
   
@@ -495,11 +459,9 @@ exports.createNextRound = catchAsync(async (req, res, _next) => {
     heats.push(heat);
   }
   
-  // Distribute qualifiers to new heats
   const athletes = qualifiers.map(q => q.Athlete);
   const heatDistribution = distributeAthletesToHeats(athletes, numberOfHeats);
   
-  // Create assignments for new heats
   for (let i = 0; i < numberOfHeats; i++) {
     for (const athlete of heatDistribution[i]) {
       await HeatAssignment.create({
@@ -521,7 +483,6 @@ exports.createNextRound = catchAsync(async (req, res, _next) => {
   });
 });
 
-// Get heat information
 exports.getHeats = catchAsync(async (req, res, _next) => {
   const { event_name, year, gender, age_group, round } = req.query;
   

@@ -35,13 +35,6 @@ exports.createAdmin = catchAsync(async (req, res, _next) => {
     is_active: true,
   });
 
-   // send email
-  // await sendEmail({
-  //   to: email,
-  //   subject: 'Your Athletech Admin Account Created',
-  //   text: `Hello ${name},\n\nYour Athletech admin account has been created.\n\nLogin credentials:\nUsername: ${email}\nPassword: ${defaultPassword}\n\nAfter logging in, please change your password immediately for security.\n\nThank you.`,
-  // });
-
   try {
     await sendEmail({
       to: email,
@@ -60,7 +53,6 @@ exports.createAdmin = catchAsync(async (req, res, _next) => {
   });
 });
 
-// get all admins
 exports.getAllAdmins = catchAsync(async (req, res, _next) => {
   const admins = await Admin.findAll({
     attributes: [
@@ -82,7 +74,6 @@ exports.getAllAdmins = catchAsync(async (req, res, _next) => {
   });
 });
 
-// cancel admin
 exports.cancelAdmin = catchAsync(async (req, res, _next) => {
   const { id } = req.params;
 

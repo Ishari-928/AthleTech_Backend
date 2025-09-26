@@ -1,11 +1,7 @@
-// controllers/eventController.js
 const Event = require("../models/Event");
 const { catchAsync } = require("../utils/ErrorHandling/catchAsync");
 
-// Middleware to check if user is super admin
-// In eventController.js - requireSuperAdmin middleware
 exports.requireSuperAdmin = (req, res, next) => {
-  // Change from req.user.role to req.user.user_role
   if (!req.user || req.user.user_role !== "superadmin") {
     return res.status(403).json({
       success: false,
@@ -34,7 +30,6 @@ exports.getAllActiveEvents = catchAsync(async (req, res) => {
   });
 });
 
-// GET all events (for super admin only)
 exports.getAllEvents = catchAsync(async (req, res) => {
   const events = await Event.findAll({
     order: [['createdAt', 'DESC']]
@@ -53,7 +48,6 @@ exports.getAllEvents = catchAsync(async (req, res) => {
   });
 });
 
-// GET event by ID
 exports.getEventById = catchAsync(async (req, res) => {
   const { id } = req.params;
   const event = await Event.findByPk(id);
@@ -71,8 +65,6 @@ exports.getEventById = catchAsync(async (req, res) => {
   });
 });
 
-// CREATE event (for super admin only)
-// In eventController.js - createEvent function
 exports.createEvent = catchAsync(async (req, res) => {
   console.log('=== BACKEND: Create event called ===');
   console.log('Request body:', req.body);
@@ -89,7 +81,6 @@ exports.createEvent = catchAsync(async (req, res) => {
       });
     }
 
-    // Check if event with same name already exists
     const existingEvent = await Event.findOne({ 
       where: { event_name: event_name.trim() } 
     });
@@ -124,7 +115,6 @@ exports.createEvent = catchAsync(async (req, res) => {
   }
 });
 
-// UPDATE event status (toggle active/inactive)
 exports.toggleEventStatus = catchAsync(async (req, res) => {
   const { id } = req.params;
   const event = await Event.findByPk(id);
@@ -146,7 +136,6 @@ exports.toggleEventStatus = catchAsync(async (req, res) => {
   });
 });
 
-// UPDATE event name
 exports.updateEvent = catchAsync(async (req, res) => {
   const { id } = req.params;
   const { event_name } = req.body;
@@ -166,11 +155,10 @@ exports.updateEvent = catchAsync(async (req, res) => {
     });
   }
 
-  // Check if another event with same name already exists
   const existingEvent = await Event.findOne({ 
     where: { 
       event_name: event_name.trim(),
-      event_id: { [Op.ne]: id } // Exclude current event
+      event_id: { [Op.ne]: id } 
     } 
   });
 
@@ -190,7 +178,6 @@ exports.updateEvent = catchAsync(async (req, res) => {
   });
 });
 
-// DELETE event (soft delete → set status inactive)
 exports.deleteEvent = catchAsync(async (req, res) => {
   const { id } = req.params;
   const event = await Event.findByPk(id);
@@ -210,7 +197,6 @@ exports.deleteEvent = catchAsync(async (req, res) => {
   });
 });
 
-// Hard delete (optional, permanent remove)
 exports.hardDeleteEvent = catchAsync(async (req, res) => {
   const { id } = req.params;
   const event = await Event.findByPk(id);

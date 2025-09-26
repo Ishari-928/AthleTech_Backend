@@ -84,7 +84,7 @@ const Athlete = sequelize.define(
         approved: {
             type: DataTypes.BOOLEAN,
             allowNull: false,
-            defaultValue: false, // default = Pending
+            defaultValue: false, 
         },
         deleted: {
             type: DataTypes.BOOLEAN,
