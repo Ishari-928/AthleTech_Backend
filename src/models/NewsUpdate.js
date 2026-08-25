@@ -22,7 +22,7 @@ const NewsUpdate = sequelize.define("NewsUpdate", {
         allowNull: false,
     },
     image: {
-        type: DataTypes.STRING, // Store Cloudinary URL
+        type: DataTypes.STRING, 
         allowNull: true,
     },
     status: {

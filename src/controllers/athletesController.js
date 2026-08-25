@@ -1,16 +1,10 @@
-// src/controllers/athletesController.js
 const Athlete = require('../models/Athlete');
 const { catchAsync } = require("../utils/ErrorHandling/catchAsync");
 const { RecordNotFoundError, ValidationFailureError } = require("../utils/ErrorHandling/CustomErrors");
 const { getNextBibNo } = require('../services/athleteService');
 const { sendEmail } = require('../services/emailService');
 
-// Create Athlete(s)
 exports.createAthlete = catchAsync(async (req, res, _next) => {
-
-// debugging logs
-// console.log("Request body:", req.body); 
-// console.log("Request files:", req.files); 
 
   let athletes = req.body.athletes || [req.body];
   const files = req.files || [];
@@ -24,7 +18,6 @@ exports.createAthlete = catchAsync(async (req, res, _next) => {
     }
   }
 
-  // Ensure it's always an array
   if (!Array.isArray(athletes)) {
     athletes = [athletes];
   }
@@ -87,10 +80,8 @@ exports.createAthlete = catchAsync(async (req, res, _next) => {
   res.status(201).json({ success: true, message: "Athlete(s) created successfully" });
 });
 
-// Get All Athletes
 exports.getAllAthletes = catchAsync(async (req, res, _next) => {
 
-  //new
 const { search, school, gender, age_group, event, status, year } = req.query;
 
 let whereClause = { deleted: false };
@@ -112,7 +103,6 @@ let whereClause = { deleted: false };
     };
   }
 
-  // Add other filters...
   if( year && year !== 'all') {
     whereClause.year = year;
   }
@@ -135,7 +125,6 @@ let whereClause = { deleted: false };
 
   const athletes = await Athlete.findAll({ where: whereClause });
   
-  // Event filter (handled separately due to JSON storage)
   let filteredAthletes = athletes;
   if (event && event !== 'all') {
     filteredAthletes = athletes.filter(athlete => 
@@ -150,16 +139,8 @@ let whereClause = { deleted: false };
     message: "All registered athletes",
     data: filteredAthletes,
   });
-
-  // const athletes = await Athlete.findAll({ where: { deleted: false }});
-  // res.status(200).json({
-  //   success: true,
-  //   message: "All registered athletes",
-  //   data: athletes,
-  // });
 });
 
-// Get Athlete by ID
 exports.getAthleteById = catchAsync(async (req, res, _next) => {
   const athlete = await Athlete.findByPk(req.params.id);
 
@@ -171,7 +152,6 @@ exports.getAthleteById = catchAsync(async (req, res, _next) => {
   res.status(200).json({ success: true, data });
 });
 
-// Update Athlete
 exports.updateAthlete = catchAsync(async (req, res, _next) => {
   const id = req.params.id;
   const {
@@ -226,7 +206,6 @@ exports.updateAthlete = catchAsync(async (req, res, _next) => {
   res.status(200).json({ success: true, message: "Updated successfully" });
 });
 
-// Delete Athlete
 exports.deleteAthlete = catchAsync(async (req, res) => {
   const id = req.params.id;
 
@@ -238,16 +217,13 @@ exports.deleteAthlete = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, message: "Athlete deleted successfully" });
 });
 
-// Approve Athlete and Send Email
 exports.approveAthlete = catchAsync(async (req, res) => {
   const athlete = await Athlete.findByPk(req.params.id);
   if (!athlete) throw new RecordNotFoundError("Athlete not found");
 
   await athlete.update({ approved: true });
 
-  // Send approval email
   try {
-    // Text version for email clients that don't support HTML
     const emailContent = `
       Dear ${athlete.name},
 
@@ -268,7 +244,6 @@ exports.approveAthlete = catchAsync(async (req, res) => {
       Athletech Team
     `;
 
-    // HTML version for better formatting
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #ff5722;">Athlete Registration Approved</h2>
@@ -298,13 +273,12 @@ exports.approveAthlete = catchAsync(async (req, res) => {
       to: athlete.email,
       subject: 'Athlete Registration Approved',
       html: emailHtml,
-      text: emailContent // Text version as fallback
+      text: emailContent 
     });
     
     console.log("Approval email sent to:", athlete.email);
   } catch (emailError) {
     console.error("Failed to send approval email:", emailError);
-    // Don't throw error - approval was successful even if email fails
   }
 
   res.status(200).json({ 

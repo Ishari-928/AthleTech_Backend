@@ -10,7 +10,6 @@ router.get('/images', async (req, res) => {
     const result = await cloudinary.api.resources({
       type: 'upload',
       folder: 'AthleTechImages', 
-      // prefix: 'AthleTechImages',
       resource_type: 'image',
       max_results: 100,
      
@@ -20,7 +19,6 @@ router.get('/images', async (req, res) => {
       return res.status(404).json({ error: 'No images found in the specified folder' });
     }
     
-    // Format the response
     const images = result.resources.map(image => ({
       public_id: image.public_id,
       url: image.secure_url,

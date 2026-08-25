@@ -3,7 +3,6 @@ const { catchAsync } = require("../utils/ErrorHandling/catchAsync");
 const cloudinary = require("../config/cloudinary");
 const { ValidationFailureError } = require("../utils/ErrorHandling/CustomErrors");
 
-// Get all coaches (all statuses)
 exports.getCoaches = catchAsync(async (req, res) => {
   const data = await Coach.findAll();
   if (!data || data.length === 0) {
@@ -12,7 +11,6 @@ exports.getCoaches = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, message: "All coaches retrieved", data });
 });
 
-// Get only active coaches
 exports.getActiveCoaches = catchAsync(async (req, res) => {
   const data = await Coach.findAll({ where: { status: "active" } });
   if (!data || data.length === 0) {
@@ -21,7 +19,6 @@ exports.getActiveCoaches = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, message: "Active coaches retrieved", data });
 });
 
-// Get single coach
 exports.getCoachByID = catchAsync(async (req, res) => {
   const { id } = req.params;
   const data = await Coach.findByPk(id);
@@ -31,7 +28,6 @@ exports.getCoachByID = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, coach: data });
 });
 
-// Create coach with Cloudinary - FIXED UPLOAD
 exports.createCoach = catchAsync(async (req, res) => {
   const { name, contact_no, whatsapp, facebook, description } = req.body;
   
@@ -41,18 +37,15 @@ exports.createCoach = catchAsync(async (req, res) => {
 
   let profileImageUrl = null;
   
-  // Upload image to Cloudinary if provided
   if (req.file) {
     try {
-      // Convert buffer to base64 for Cloudinary
       const base64Image = req.file.buffer.toString('base64');
       const dataUri = `data:${req.file.mimetype};base64,${base64Image}`;
       
-      // Use uploader.upload with promise
       const uploadResult = await cloudinary.uploader.upload(dataUri, {
         folder: 'coaches',
         resource_type: 'image',
-        timeout: 30000 // 30 seconds timeout
+        timeout: 30000 
       });
       
       profileImageUrl = uploadResult.secure_url;
@@ -83,7 +76,6 @@ exports.createCoach = catchAsync(async (req, res) => {
   });
 });
 
-// Update coach - FIXED UPLOAD
 exports.updateCoach = catchAsync(async (req, res) => {
   const { id } = req.params;
   const { name, contact_no, whatsapp, facebook, description, status } = req.body;
@@ -95,17 +87,14 @@ exports.updateCoach = catchAsync(async (req, res) => {
 
   let profileImageUrl = coach.profile_image_url;
   
-  // Upload new image to Cloudinary if provided
   if (req.file) {
     try {
-      // Delete old image from Cloudinary if exists
       if (coach.profile_image_url) {
         try {
           const publicId = coach.profile_image_url.split('/').pop().split('.')[0];
           await cloudinary.uploader.destroy(`coaches/${publicId}`);
         } catch (deleteError) {
           console.error('Error deleting old image:', deleteError);
-          // Continue with upload even if delete fails
         }
       }
       
@@ -142,7 +131,6 @@ exports.updateCoach = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, message: "Coach updated successfully" });
 });
 
-// Soft delete (mark inactive) - Only for super admin
 exports.deleteCoach = catchAsync(async (req, res) => {
   const { id } = req.params;
   const coach = await Coach.findByPk(id);
@@ -150,18 +138,15 @@ exports.deleteCoach = catchAsync(async (req, res) => {
     return res.status(404).json({ success: false, message: "Coach not found" });
   }
   
-  // Delete image from Cloudinary if exists
   if (coach.profile_image_url) {
     try {
       const publicId = coach.profile_image_url.split('/').pop().split('.')[0];
       await cloudinary.uploader.destroy(`coaches/${publicId}`);
     } catch (error) {
       console.error('Error deleting image from Cloudinary:', error);
-      // Continue with deletion even if image delete fails
     }
   }
   
-  // Use hard delete instead of soft delete to completely remove from database
   await coach.destroy();
   
   res.status(200).json({ 
@@ -171,7 +156,6 @@ exports.deleteCoach = catchAsync(async (req, res) => {
   });
 });
 
-// Hard delete (only for super admin)
 exports.hardDeleteCoach = catchAsync(async (req, res) => {
   const { id } = req.params;
   const coach = await Coach.findByPk(id);
@@ -179,7 +163,6 @@ exports.hardDeleteCoach = catchAsync(async (req, res) => {
     return res.status(404).json({ success: false, message: "Coach not found" });
   }
   
-  // Delete image from Cloudinary if exists
   if (coach.profile_image_url) {
     try {
       const publicId = coach.profile_image_url.split('/').pop().split('.')[0];

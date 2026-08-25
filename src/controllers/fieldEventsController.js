@@ -4,23 +4,18 @@ const { catchAsync } = require("../utils/ErrorHandling/catchAsync");
 const { RecordNotFoundError, ValidationFailureError } = require("../utils/ErrorHandling/CustomErrors");
 const { Op } = require('sequelize');
 
-// Helper function to parse performance value
 function parsePerformanceValue(performance) {
   if (!performance || performance.toString().trim() === '') {
     return null;
   }
   
-  // Convert to string, trim, and remove any non-numeric characters except decimal point
   const numericStr = performance.toString().trim().replace(/[^0-9.]/g, '');
   
-  // Parse as float
   const value = parseFloat(numericStr);
   
-  // Return null if not a valid number or negative
   return isNaN(value) || value < 0 ? null : value;
 }
 
-// Helper function to format performance value
 function formatPerformanceValue(value) {
   return value !== null ? `${value.toFixed(2)}M` : null;
 }
@@ -30,7 +25,6 @@ exports.getFieldEvents = catchAsync(async (req, res, _next) => {
   
   let whereClause = {};
   
-  // Build filter conditions
   if (year && year !== 'all') {
     whereClause.year = year;
   }
@@ -79,8 +73,6 @@ exports.getFieldEvents = catchAsync(async (req, res, _next) => {
   }
 });
 
-// Create or update field event performance
-// Create or update field event performance
 exports.updateFieldEventPerformance = catchAsync(async (req, res, _next) => {
   const {
     athlete_id,
@@ -100,13 +92,11 @@ exports.updateFieldEventPerformance = catchAsync(async (req, res, _next) => {
   console.log('=== DEBUG: Starting updateFieldEventPerformance ===');
   console.log('Request body:', req.body);
   
-  // Validate required fields
   if (!athlete_id || !event_name || !year || !gender || !age_group || !school) {
     console.log('Validation failed: Missing required fields');
     throw new ValidationFailureError("Missing required fields");
   }
   
-  // Get all attempts and convert empty strings to null
   const attempts = [attempt_1, attempt_2, attempt_3, attempt_4, attempt_5, attempt_6].map(
     attempt => {
       const result = attempt === '' ? null : attempt;
@@ -117,7 +107,6 @@ exports.updateFieldEventPerformance = catchAsync(async (req, res, _next) => {
   
   console.log('All processed attempts:', attempts);
   
-  // Parse all attempt values to numbers
   const attemptValues = attempts.map(attempt => {
     const parsed = parsePerformanceValue(attempt);
     console.log(`Parsed attempt "${attempt}":`, parsed);
@@ -126,7 +115,6 @@ exports.updateFieldEventPerformance = catchAsync(async (req, res, _next) => {
   
   console.log('Parsed attempt values:', attemptValues);
   
-  // Find the best (max) performance value
   let bestPerformanceValue = null;
   let bestPerformanceIndex = -1;
   
@@ -146,13 +134,11 @@ exports.updateFieldEventPerformance = catchAsync(async (req, res, _next) => {
   console.log('Final best performance value:', bestPerformanceValue);
   console.log('Best performance index:', bestPerformanceIndex);
   
-  // Format the best performance
   const bestPerformance = bestPerformanceValue !== null ? 
     formatPerformanceValue(bestPerformanceValue) : null;
   
   console.log('Formatted best performance:', bestPerformance);
   
-  // Check if performance already exists
   const existingPerformance = await FieldEvents.findOne({
     where: {
       athlete_id,
@@ -166,7 +152,6 @@ exports.updateFieldEventPerformance = catchAsync(async (req, res, _next) => {
   console.log('Existing performance found:', existingPerformance ? 'Yes' : 'No');
   
   if (existingPerformance) {
-    // Update existing performance
     console.log('Updating existing performance with best_performance:', bestPerformance);
     const updateResult = await existingPerformance.update({
       attempt_1,
@@ -180,7 +165,6 @@ exports.updateFieldEventPerformance = catchAsync(async (req, res, _next) => {
     
     console.log('Update result:', updateResult.toJSON());
     
-    // Recalculate places for this event category
     await recalculatePlaces(event_name, year, gender, age_group);
     
     console.log('=== DEBUG: Performance updated successfully ===');
@@ -191,7 +175,6 @@ exports.updateFieldEventPerformance = catchAsync(async (req, res, _next) => {
       data: existingPerformance
     });
   } else {
-    // Create new performance
     console.log('Creating new performance with best_performance:', bestPerformance);
     const newPerformance = await FieldEvents.create({
       athlete_id,
@@ -211,7 +194,6 @@ exports.updateFieldEventPerformance = catchAsync(async (req, res, _next) => {
     
     console.log('New performance created:', newPerformance.toJSON());
     
-    // Calculate places for this event category
     await recalculatePlaces(event_name, year, gender, age_group);
     
     console.log('=== DEBUG: Performance created successfully ===');
@@ -224,10 +206,8 @@ exports.updateFieldEventPerformance = catchAsync(async (req, res, _next) => {
   }
 });
 
-// Helper function to recalculate places
 async function recalculatePlaces(event_name, year, gender, age_group) {
   try {
-    // Get all performances for this event category
     const performances = await FieldEvents.findAll({
       where: {
         event_name,
@@ -238,7 +218,6 @@ async function recalculatePlaces(event_name, year, gender, age_group) {
       }
     });
     
-    // Parse best performance values for sorting
     const performancesWithValues = performances.map(performance => {
       const value = parsePerformanceValue(performance.best_performance);
       return {
@@ -247,11 +226,9 @@ async function recalculatePlaces(event_name, year, gender, age_group) {
       };
     });
     
-    // Filter out invalid performances and sort by numeric value (descending)
     const validPerformances = performancesWithValues.filter(p => p.numericValue !== null);
     validPerformances.sort((a, b) => b.numericValue - a.numericValue);
     
-    // Update places
     for (let i = 0; i < validPerformances.length; i++) {
       await FieldEvents.update(
         { place: i + 1 },
@@ -259,7 +236,6 @@ async function recalculatePlaces(event_name, year, gender, age_group) {
       );
     }
     
-    // Set place to null for invalid performances
     const invalidPerformances = performancesWithValues.filter(p => p.numericValue === null);
     for (const performance of invalidPerformances) {
       await FieldEvents.update(
@@ -274,7 +250,6 @@ async function recalculatePlaces(event_name, year, gender, age_group) {
   }
 }
 
-// Get athletes for field events (approved athletes with field events)
 exports.getFieldEventAthletes = catchAsync(async (req, res, _next) => {
   const { event_name, year, gender, age_group, school } = req.query;
   
@@ -283,7 +258,6 @@ exports.getFieldEventAthletes = catchAsync(async (req, res, _next) => {
     deleted: false
   };
   
-  // Add filters
   if (year && year !== 'all') {
     whereClause.year = year;
   }
@@ -301,29 +275,23 @@ exports.getFieldEventAthletes = catchAsync(async (req, res, _next) => {
   }
   
   try {
-    // Get all athletes matching the filters
     const athletes = await Athlete.findAll({
       where: whereClause,
       attributes: ['athlete_id', 'bib_no', 'name', 'school', 'age_group', 'gender', 'selected_events']
     });
     
-    // Create an array to hold all athlete-event combinations
     const athleteEvents = [];
     
-    // Process each athlete and their events
     athletes.forEach(athlete => {
       let events;
       
       try {
-        // Handle different formats of selected_events
         if (Array.isArray(athlete.selected_events)) {
           events = athlete.selected_events;
         } else if (typeof athlete.selected_events === 'string') {
-          // Try to parse JSON string
           try {
             events = JSON.parse(athlete.selected_events);
           } catch (parseError) {
-            // If it's not JSON, treat it as a comma-separated string
             events = athlete.selected_events.split(',').map(event => event.trim());
           }
         } else {
@@ -334,13 +302,11 @@ exports.getFieldEventAthletes = catchAsync(async (req, res, _next) => {
         events = [];
       }
       
-      // Filter for field events only
       const fieldEvents = events.filter(event => 
         ['Long Jump', 'High Jump', 'Shot Put', 'Javelin Throw', 'Discus Throw', 'Triple Jump']
           .includes(event)
       );
       
-      // If a specific event is requested, filter for that event only
       if (event_name && event_name !== 'all') {
         if (fieldEvents.includes(event_name)) {
           athleteEvents.push({
@@ -349,7 +315,6 @@ exports.getFieldEventAthletes = catchAsync(async (req, res, _next) => {
           });
         }
       } else {
-        // If no specific event, include all field events
         fieldEvents.forEach(event => {
           athleteEvents.push({
             ...athlete.toJSON(),

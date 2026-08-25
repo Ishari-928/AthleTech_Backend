@@ -16,7 +16,6 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Fix the route import - use a variable
 const athletesRouter = require('./routes/athletes');
 const authRouter = require('./routes/auth');
 const adminsRouter = require('./routes/admins');
@@ -26,6 +25,7 @@ const coachRouter = require('./routes/coachRoutes');
 const galleryRoutes = require('./routes/galleryRoutes');
 const fieldEventsRouter = require('./routes/fieldEventsRoutes');
 const trackEventsRouter = require('./routes/trackEventsRoutes');
+const heatRoutes = require('./routes/heatRoutes');
 
 app.use("/api/v1/athletes", athletesRouter);
 app.use('/api/v1/auth', authRouter);
@@ -36,6 +36,8 @@ app.use("/api/v1/coaches", coachRouter);
 app.use("/api/v1/gallery", galleryRoutes);
 app.use("/api/v1/field-events", fieldEventsRouter);
 app.use("/api/v1/track-events", trackEventsRouter);
+app.use("/api/v1/heats", heatRoutes);
+
 
 // Example route
 app.get('/', (req, res) => {

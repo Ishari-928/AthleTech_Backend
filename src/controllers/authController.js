@@ -59,7 +59,6 @@ exports.requestOtp = catchAsync(async (req, res, _next) => {
   if (!user) throw new RecordNotFoundError('User not found.');
 
   if (!user) {
-    // For security, don't reveal if user exists for reset_password purpose
     if (purpose === 'reset_password') {
       return res.status(200).json({
         success: true,
@@ -96,12 +95,11 @@ exports.requestOtp = catchAsync(async (req, res, _next) => {
       emailSubject = 'First Login Password Change - AthleteTech';
       emailText = `Your first login OTP is: ${code}. It expires in ${process.env.OTP_TTL_MINUTES || 1} minutes.`;
       break;
-    default: // change_password
+    default: 
       emailSubject = 'Change Password OTP - AthleteTech';
       emailText = `Your change password OTP is: ${code}. It expires in ${process.env.OTP_TTL_MINUTES || 1} minutes.`;
   }
 
-  // Deliver OTP - FIXED THE LOGIC
   if (user.otp_channel === 'sms' && user.contact_no) {
     await sendSms({ to: user.contact_no, body: `Your AthleTech OTP is: ${code}` });
   } else {
@@ -112,13 +110,12 @@ exports.requestOtp = catchAsync(async (req, res, _next) => {
     });
   }
 
-  // During development, return OTP for easy testing
   const includeOtp = process.env.NODE_ENV !== 'production';
 
   res.status(200).json({
     success: true,
     message: 'OTP sent.',
-    expires_at: expires, // Make sure to include this for frontend timer
+    expires_at: expires, 
     ...(includeOtp ? { dev_otp: code } : {}),
   });
 });
@@ -211,7 +208,6 @@ exports.resetPasswordWithOtp = catchAsync(async (req, res, _next) => {
   });
 });
 
-// Add this function to your authController
 exports.forgotPassword = catchAsync(async (req, res, _next) => {
   const { email } = req.body;
   
@@ -219,13 +215,11 @@ exports.forgotPassword = catchAsync(async (req, res, _next) => {
 
   const user = await Admin.findOne({ where: { email } });
   
-  // Return generic message regardless of whether email exists (for security)
-  // But we'll handle validation differently for the frontend
   if (!user) {
     return res.status(200).json({
       success: false,
       message: 'If the email exists, a password reset OTP has been sent.',
-      emailExists: false // Add this flag for frontend validation
+      emailExists: false 
     });
   }
 
@@ -249,7 +243,7 @@ exports.forgotPassword = catchAsync(async (req, res, _next) => {
     success: true,
     message: 'If the email exists, a password reset OTP has been sent.',
     expires_at: expires,
-    emailExists: true, // Add this flag for frontend validation
+    emailExists: true, 
     ...(includeOtp ? { dev_otp: code } : {}),
   });
 });

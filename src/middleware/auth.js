@@ -11,7 +11,6 @@ const protect = catchAsync(async (req, _res, next) => {
   console.log("Auth header:", header);
   console.log("Cookie token:", cookieToken);
 
-  // Use header only if it's not undefined
   if (header && header.startsWith("Bearer ")) {
     const extracted = header.split(" ")[1];
     if (extracted && extracted !== "undefined") {
@@ -19,7 +18,6 @@ const protect = catchAsync(async (req, _res, next) => {
     }
   }
 
-  // Always check cookie if no valid token yet
   if (!token && cookieToken) {
     token = cookieToken;
   }
@@ -35,7 +33,6 @@ const protect = catchAsync(async (req, _res, next) => {
     throw new UnauthorizedError("Invalid token.");
   }
 
-  //  Use correct PK
   const user = await Admin.findByPk(decoded.id || decoded.admin_id);
   if (!user || !user.is_active)
     throw new UnauthorizedError("Invalid or inactive user.");
