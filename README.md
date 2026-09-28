@@ -123,7 +123,7 @@ Registration fees are paid offline by bank deposit or transfer. The API stores t
 - Node.js 18+ and npm
 - MySQL 8.0+
 - SMTP credentials or an email service API key
-- Firebase project credentials
+<!-- - Firebase project credentials -->
 
 ### Installation
 
@@ -153,10 +153,10 @@ DB_NAME=athletech
 JWT_SECRET=your_jwt_secret
 JWT_EXPIRES_IN=1d
 
-# Firebase
+<!-- # Firebase
 FIREBASE_PROJECT_ID=
 FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY=
+FIREBASE_PRIVATE_KEY= -->
 
 # Payment slip uploads
 SLIP_UPLOAD_DIR=./uploads/slips
